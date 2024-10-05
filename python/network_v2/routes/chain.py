@@ -23,27 +23,7 @@ def get_chain():
 
 @route.route('/mine', methods=['GET'])
 def mine():
-    # Proof of Work 알고리즘을 사용하여 다음 블록을 찾습니다.
     print("### MINING STARTED ###")
-
-    # coinbase = Transaction(
-    #     sender=mine_owner,
-    #     recipient=node_id,
-    #     amount=mine_profit,
-    #     time=time()
-    # )
-    # block = Block(
-    #     BlockHeader(
-    #         timestamp=time(),
-    #         previous_hash=blockchain.hash(blockchain.last_block),
-    #         index=blockchain.last_block.header.index + 1,
-    #         nonce=0
-    #     ),
-    #     [
-    #         coinbase,
-    #         *blockchain.transactions
-    #     ]
-    # )
     
     coinbase = blockchain.new_transaction(
         sender=mine_owner,

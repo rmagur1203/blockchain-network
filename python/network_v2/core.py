@@ -16,13 +16,33 @@ import json
 import hashlib
 import random
 import requests
+import datetime
+
+class SmartContract(object):
+    def __init__(self, contract: str, address: str=None):
+        self.contract: str = contract
+        self.address: str = address or hashlib.sha256(str(datetime.datetime.now().timestamp()).encode()).hexdigest()
+    
+    @staticmethod
+    def from_dict(data: dict):
+        return SmartContract(data['contract'], data['address'])
+    
+    def to_dict(self):
+        return {
+            'contract': self.contract,
+            'address': self.address,
+        }
+
+    def hash(self):
+        return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
 
 class Transaction(object):
-    def __init__(self, sender: str, recipient: str, amount: float, time: float):
+    def __init__(self, sender: str, recipient: str, amount: float, time: float, smart_contract: str = None):
         self.sender: str = sender
         self.recipient: str = recipient
         self.amount: float = amount
         self.timestamp: float = time
+        self.smart_contract: str = smart_contract
     
     @property
     def txid(self):
@@ -132,13 +152,24 @@ class Blockchain:
             block.header.timestamp = time()
         return block.header.nonce
     
-    def new_transaction(self, sender: str, recipient: str, amount: float, time=time()) -> Transaction:
-        transaction = Transaction(sender, recipient, amount, time)
+    def new_transaction(self, sender: str, recipient: str, amount: float, smart_contract=None, time=time()) -> Transaction:
+        transaction = Transaction(
+            sender=sender,
+            recipient=recipient,
+            amount=amount,
+            time=time,
+            smart_contract=smart_contract
+        )
         self.transactions.append(transaction)
         return transaction
     
     def new_block(self, nonce: int, index=None, previous_hash=None, time=time()) -> Block:
-        header = BlockHeader(time, previous_hash or self.hash(self.chain[-1]), index or self.chain[-1].header.index + 1, nonce)
+        header = BlockHeader(
+            time=time,
+            previous_hash=previous_hash or self.hash(self.chain[-1]),
+            index=index or self.chain[-1].header.index + 1,
+            nonce=nonce
+        )
         self.transactions.sort(key=lambda tx: tx.timestamp)
         block = Block(header, self.transactions)
         self.transactions = []

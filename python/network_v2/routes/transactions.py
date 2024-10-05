@@ -3,6 +3,7 @@ import requests
 from flask import Blueprint, jsonify, request
 from time import time
 
+from core import SmartContract
 from variables import blockchain
 
 route = Blueprint(
@@ -29,10 +30,18 @@ def new_transaction():
     timestamp = values['timestamp'] if 'timestamp' in values else time()
     last_timestamp = blockchain.transactions[-1].timestamp if len(blockchain.transactions) > 0 else 0
 
+    smart_contract = SmartContract(values['smart_contract']) if 'smart_contract' in values else None
+
     if timestamp <= last_timestamp:
         return jsonify({'message': 'This transaction is already added'}), 200
 
-    transaction = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'], timestamp)
+    transaction = blockchain.new_transaction(
+        sender=values['sender'],
+        recipient=values['recipient'],
+        amount=values['amount'],
+        time=timestamp,
+        smart_contract=smart_contract
+    )
 
     for node in blockchain.nodes:
         headers = {'Content-Type': 'application/json; charset=utf-8'}
