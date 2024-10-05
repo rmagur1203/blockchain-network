@@ -19,17 +19,17 @@ import requests
 import datetime
 
 class SmartContract(object):
-    def __init__(self, contract: str, address: str=None):
-        self.contract: str = contract
+    def __init__(self, code: str, address: str=None):
+        self.code: str = code
         self.address: str = address or hashlib.sha256(str(datetime.datetime.now().timestamp()).encode()).hexdigest()
     
     @staticmethod
     def from_dict(data: dict):
-        return SmartContract(data['contract'], data['address'])
+        return SmartContract(data['code'], data['address'])
     
     def to_dict(self):
         return {
-            'contract': self.contract,
+            'code': self.code,
             'address': self.address,
         }
 
@@ -37,12 +37,12 @@ class SmartContract(object):
         return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True).encode()).hexdigest()
 
 class Transaction(object):
-    def __init__(self, sender: str, recipient: str, amount: float, time: float, smart_contract: str = None):
+    def __init__(self, sender: str, recipient: str, amount: float, timestamp: float, contract: str = None):
         self.sender: str = sender
         self.recipient: str = recipient
         self.amount: float = amount
-        self.timestamp: float = time
-        self.smart_contract: str = smart_contract
+        self.timestamp: float = timestamp
+        self.contract: str = contract
     
     @property
     def txid(self):
@@ -50,7 +50,13 @@ class Transaction(object):
     
     @staticmethod
     def from_dict(data: dict):
-        return Transaction(data['sender'], data['recipient'], data['amount'], data['timestamp'])
+        return Transaction(
+            sender=data['sender'],
+            recipient=data['recipient'],
+            amount=data['amount'],
+            timestamp=data['timestamp'],
+            contract=SmartContract.from_dict(data['contract']) if data['contract'] else None
+        )
     
     def to_dict(self):
         return {
@@ -58,6 +64,7 @@ class Transaction(object):
             'recipient': self.recipient,
             'amount': self.amount,
             'timestamp': self.timestamp,
+            'contract': self.contract.to_dict() if self.contract else None
         }
 
     def hash(self):
@@ -152,20 +159,20 @@ class Blockchain:
             block.header.timestamp = time()
         return block.header.nonce
     
-    def new_transaction(self, sender: str, recipient: str, amount: float, smart_contract=None, time=time()) -> Transaction:
+    def new_transaction(self, sender: str, recipient: str, amount: float, contract: SmartContract=None, time=time()) -> Transaction:
         transaction = Transaction(
             sender=sender,
             recipient=recipient,
             amount=amount,
-            time=time,
-            smart_contract=smart_contract
+            timestamp=time,
+            contract=contract
         )
         self.transactions.append(transaction)
         return transaction
     
     def new_block(self, nonce: int, index=None, previous_hash=None, time=time()) -> Block:
         header = BlockHeader(
-            time=time,
+            timestamp=time,
             previous_hash=previous_hash or self.hash(self.chain[-1]),
             index=index or self.chain[-1].header.index + 1,
             nonce=nonce

@@ -3,6 +3,7 @@ from time import time
 
 import json
 import requests
+import datetime
 
 from variables import blockchain, mine_owner, mine_profit, node_id, port
 from core import Block, BlockHeader, Transaction
@@ -24,6 +25,7 @@ def get_chain():
 @route.route('/mine', methods=['GET'])
 def mine():
     print("### MINING STARTED ###")
+    start = datetime.datetime.now()
     
     coinbase = blockchain.new_transaction(
         sender=mine_owner,
@@ -34,7 +36,8 @@ def mine():
 
     proof = blockchain.pow(block)
 
-    print(f"### MINING FINISHED {proof} ###")
+    end = datetime.datetime.now()
+    print(f"### MINING FINISHED {proof} in {end - start} ###")
 
     for node in blockchain.nodes:
         headers = {'Content-Type': 'application/json; charset=utf-8'}

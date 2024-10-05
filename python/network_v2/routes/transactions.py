@@ -30,7 +30,7 @@ def new_transaction():
     timestamp = values['timestamp'] if 'timestamp' in values else time()
     last_timestamp = blockchain.transactions[-1].timestamp if len(blockchain.transactions) > 0 else 0
 
-    smart_contract = SmartContract(values['smart_contract']) if 'smart_contract' in values else None
+    contract = SmartContract(values['contract']) if 'contract' in values else None
 
     if timestamp <= last_timestamp:
         return jsonify({'message': 'This transaction is already added'}), 200
@@ -40,7 +40,7 @@ def new_transaction():
         recipient=values['recipient'],
         amount=values['amount'],
         time=timestamp,
-        smart_contract=smart_contract
+        contract=contract
     )
 
     for node in blockchain.nodes:
@@ -49,5 +49,8 @@ def new_transaction():
         requests.post(node.path('/transactions/new'), headers=headers, data=json.dumps(data))
         print(f'Send transaction to >> {node}')
 
-    response = {'message': f'Transaction will be added to Block'}
+    response = {
+        'message': f'Transaction will be added to Block',
+        'contract': contract.to_dict() if contract else None
+    }
     return jsonify(response), 201
