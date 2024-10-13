@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Bitcoin</title>
+</head>
+
+<body>
+    <h1 style="text-align: center;">WebRTC Bitcoin</h1>
+    <hr />
+    <div style="text-align: center;">
+        <h2>Candidate</h2>
+        <textarea id="area_candidate" cols="30" rows="10"
+            style="width: 100%; padding: 10px; font-size: 16px;"></textarea>
+        <br>
+        <button id="btn_add_candidate" style="margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            후보 추가
+        </button>
+        <button id="btn_set_candidate" style="margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            후보 설정
+        </button>
+    </div>
+    <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+        <div style="text-align: center;">
+            <h2>Offer</h2>
+            <textarea id="area_offer" cols="30" rows="10"
+                style="width: 100%; padding: 10px; font-size: 16px;"></textarea>
+            <br>
+            <button id="btn_create_offer"
+                style="margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+                새 연결 생성
+            </button>
+            <button id="btn_accept_offer"
+                style="margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+                연결 수락
+            </button>
+        </div>
+        <div style="text-align: center;">
+            <h2>Answer</h2>
+            <textarea id="area_answer" cols="30" rows="10"
+                style="width: 100%; padding: 10px; font-size: 16px;"></textarea>
+            <br>
+            <button id="btn_accept_answer"
+                style="margin-top: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer;">
+                응답 수락
+            </button>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <h2>Message</h2>
+        <div id="area_received_message" style="margin-top: 10px; padding: 10px; font-size: 16px;"></div>
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
+            <input id="input_message" type="text" style="margin-top: 10px; padding: 10px; font-size: 16px;">
+            <button id="btn_send_message" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+                메시지 전송
+            </button>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+        <video id="local_video" autoplay playsinline style="width: 320px; height: 240px;"></video>
+        <video id="remote_video" autoplay playsinline style="width: 320px; height: 240px;"></video>
+    </div>
+
+    <script>
+        async function getMedia() {
+            const constraints = {
+                video: true,
+                audio: true
+            };
+
+            return await navigator.mediaDevices.getDisplayMedia(constraints);
+        }
+
+        function addMessage(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            const areaReceivedMessage = document.getElementById('area_received_message');
+            areaReceivedMessage.appendChild(p);
+        }
+
+        function sendMessage() {
+            const inputMessage = document.getElementById('input_message');
+            const message = inputMessage.value;
+            window.dataChannel.send(message);
+            addMessage(message);
+        }
+    </script>
+
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script>
+        const iceServerConfig = {
+            "iceServers": [{
+                "urls": "stun:stun.l.google.com:19302"
+            }]
+        }
+
+        const peerConnection = new RTCPeerConnection(iceServerConfig);
+
+        peerConnection.addEventListener('icecandidate', (event) => {
+            if (event.candidate) {
+                window.candidate = window.candidate || [];
+                window.candidate.push(event.candidate);
+
+                console.log('icecandidate', event.candidate);
+            }
+        });
+
+        peerConnection.addEventListener('track', (event) => {
+            console.log('track', event.streams[0]);
+            const remoteVideo = document.getElementById('remote_video');
+            remoteVideo.srcObject = event.streams[0];
+        });
+
+        peerConnection.addEventListener('datachannel', (event) => {
+            console.log('datachannel', event.channel);
+            window.dataChannel = event.channel;
+            window.dataChannel.addEventListener('message', (event) => {
+                console.log('datachannel message', event.data);
+                addMessage(event.data);
+            });
+        });
+
+        async function addCandidate() {
+            const areaCandidate = document.getElementById('area_candidate');
+            const candidates = JSON.parse(areaCandidate.value);
+
+            for (const candidate of candidates) {
+                await peerConnection.addIceCandidate(candidate);
+            }
+        }
+
+        async function createOffer() {
+            return await peerConnection.createOffer().then((offer) => {
+                peerConnection.setLocalDescription(offer);
+                return offer;
+            });
+        }
+
+        async function acceptOffer(offer) {
+            await peerConnection.setRemoteDescription(offer);
+            return await peerConnection.createAnswer().then((answer) => {
+                peerConnection.setLocalDescription(answer);
+                return answer;
+            });
+        }
+
+        async function acceptAnswer(answer) {
+            await peerConnection.setRemoteDescription(answer);
+
+            const dataChannel = peerConnection.createDataChannel('dataChannel');
+
+            dataChannel.addEventListener('open', () => {
+                console.log('dataChannel open');
+                dataChannel.send('Hello, World!');
+            });
+        }
+    </script>
+    <script>
+        const areaCandidate = document.getElementById('area_candidate');
+
+        const btnAddCandidate = document.getElementById('btn_add_candidate');
+
+        btnAddCandidate.addEventListener('click', async () => {
+            await addCandidate();
+        });
+
+        const btnSetCandidate = document.getElementById('btn_set_candidate');
+
+        btnSetCandidate.addEventListener('click', async () => {
+            areaCandidate.value = JSON.stringify(window.candidate);
+        });
+    </script>
+    <script>
+        const areaOffer = document.getElementById('area_offer');
+        const areaAnswer = document.getElementById('area_answer');
+
+        const btnCreateOffer = document.getElementById('btn_create_offer');
+
+        btnCreateOffer.addEventListener('click', async () => {
+            const stream = await getMedia();
+            const localVideo = document.getElementById('local_video');
+            localVideo.srcObject = stream;
+
+            stream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, stream);
+            });
+
+            window.dataChannel = peerConnection.createDataChannel('dataChannel');
+            window.dataChannel.addEventListener('message', (event) => {
+                console.log('dataChannel message', event.data);
+                addMessage(event.data);
+            });
+
+            const offer = await createOffer();
+            areaOffer.value = JSON.stringify(offer);
+        });
+
+        const btnAcceptOffer = document.getElementById('btn_accept_offer');
+
+        btnAcceptOffer.addEventListener('click', async () => {
+            const stream = await getMedia();
+            const localVideo = document.getElementById('local_video');
+            localVideo.srcObject = stream;
+
+            stream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, stream);
+            });
+
+            const offer = JSON.parse(areaOffer.value);
+            const answer = await acceptOffer(offer);
+            areaAnswer.value = JSON.stringify(answer);
+        });
+
+        const btnAcceptAnswer = document.getElementById('btn_accept_answer');
+
+        btnAcceptAnswer.addEventListener('click', async () => {
+            const answer = JSON.parse(areaAnswer.value);
+            await acceptAnswer(answer);
+        });
+    </script>
+    <script>
+        const btnSendMessage = document.getElementById('btn_send_message');
+
+        btnSendMessage.addEventListener('click', () => {
+            sendMessage();
+        });
+    </script>
+</body>
+
+</html>
