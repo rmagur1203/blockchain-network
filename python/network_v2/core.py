@@ -54,7 +54,7 @@ class Wallet(object):
 class Transaction(object):
     def __init__(
         self,
-        sender: str | Wallet,
+        sender: Wallet,
         recipient: str,
         amount: float,
         time: float,
