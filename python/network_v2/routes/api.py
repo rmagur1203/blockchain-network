@@ -24,11 +24,10 @@ def signup():
 
 def jsonify_transaction(transaction):
     return {
-        "sender": transaction.sender[:10],
-        "recipient": transaction.recipient[:10],
+        "sender": transaction.sender,
+        "recipient": transaction.recipient,
         "amount": transaction.amount,
         "time": transaction.timestamp,
-        "signature": transaction.signature,
     }
 
 @route.route("/home", methods=["POST"])
