@@ -59,7 +59,8 @@ def post_send():
     return 201
 
 
-@route.route(["/showQR", "/printQR"], methods=["POST"])
+@route.route("/showQR", methods=["POST"])
+@route.route("/printQR", methods=["POST"])
 def get_qr():
     body = request.get_json()
     wallet = body["myAddress"]
