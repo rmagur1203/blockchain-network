@@ -10,7 +10,7 @@ route = Blueprint("api", __name__, url_prefix="/api")
 
 
 @route.route("/login", methods=["POST"])
-def get_wallet():
+def login():
     body = request.get_json()
     wallet = Wallet.from_dict(body)
     session["wallet"] = wallet.to_dict()
@@ -18,13 +18,47 @@ def get_wallet():
 
 
 @route.route("/signup", methods=["POST"])
-def post_wallet():
+def signup():
     wallet = Wallet()
     return jsonify(wallet.to_dict()), 201
 
+def jsonify_transaction(transaction):
+    return {
+        "sender": transaction.sender[:10],
+        "recipient": transaction.recipient[:10],
+        "amount": transaction.amount,
+        "time": transaction.timestamp,
+        "signature": transaction.signature,
+    }
 
 @route.route("/home", methods=["POST"])
 def get_home():
+    body = request.get_json()
+    address = body["myAddress"]
+    blocks = blockchain.chain
+    transactions = sum([block.transactions for block in blocks], [])
+    my_send_transactions = [
+        transaction for transaction in transactions if transaction.sender == address
+    ]
+    my_receive_transactions = [
+        transaction for transaction in transactions if transaction.recipient == address
+    ]
+    my_transactions = sorted(
+        my_send_transactions + my_receive_transactions, key=lambda tx: tx.timestamp
+    )
+    my_transactions = my_transactions[:5]
+    amount = sum([transaction.amount for transaction in my_receive_transactions]) - sum(
+        [transaction.amount for transaction in my_send_transactions]
+    )
+    return (
+        jsonify(
+            {"transactions": [jsonify_transaction(tx) for tx in my_transactions], "balance": amount}
+        ),
+        200,
+    )
+
+@route.route("/wallet", methods=["POST"])
+def post_wallet():
     body = request.get_json()
     address = body["myAddress"]
     blocks = blockchain.chain
@@ -43,7 +77,7 @@ def get_home():
     )
     return (
         jsonify(
-            {"transactions": [tx.to_dict() for tx in my_transactions], "amount": amount}
+            {"transactions": [jsonify_transaction(tx) for tx in my_transactions], "balance": amount}
         ),
         200,
     )
