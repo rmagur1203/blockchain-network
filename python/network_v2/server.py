@@ -10,6 +10,7 @@ else:
 
 import json
 from flask import Flask
+from flask_cors import CORS
 
 import logging
 
@@ -17,6 +18,8 @@ print(f"Node ID: {node_id}")
 print(f"Port: {port}")
 
 app = Flask(__name__)
+
+CORS(app)
 
 logging.getLogger("werkzeug").disabled = True
 
