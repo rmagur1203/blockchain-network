@@ -85,11 +85,14 @@ def post_wallet():
 @route.route("/send", methods=["POST"])
 def post_send():
     body = request.get_json()
-    wallet = Wallet.from_dict(session["wallet"])
+    wallet = Wallet.from_dict({
+        "public_key": body["myAddress"],
+        "private_key": body["privateKey"],
+    })
     transaction = blockchain.new_transaction(
-        wallet, body["recipient"], body["amount"], body["timestamp"]
+        wallet, body["sendAddress"], body["amount"]
     )
-    return 201
+    return jsonify(jsonify_transaction(transaction)), 201
 
 
 @route.route("/showQR", methods=["POST"])
